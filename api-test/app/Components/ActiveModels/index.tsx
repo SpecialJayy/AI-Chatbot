@@ -41,7 +41,7 @@ export function ActiveModels({ apiService }: ActiveModelsProps) {
 
         const intervalId = setInterval(() => {
             fetchModels(false); 
-        }, 1000);
+        }, 5000);
 
         return () => {
             clearInterval(intervalId);

@@ -1,3 +1,3 @@
 export interface options {
-    "temperature": number
+    "temperature": number,
 }

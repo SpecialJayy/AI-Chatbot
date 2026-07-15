@@ -1,16 +1,36 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Cookies from 'js-cookie'; 
 
 interface SettingsProps {
-    sliderValue: number,
-    setSliderValue:(value:number) => void
+  sliderValue: number;
+  setSliderValue: (value: number) => void;
+
+  systemPrompt: string;
+  setSystemPrompt: (value: string) => void;
 }
 
-export function Settings({sliderValue,setSliderValue}:SettingsProps) {
+export function Settings({
+  sliderValue,
+  setSliderValue,
+  systemPrompt,
+  setSystemPrompt
+}: SettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-//   const [numberValue, setNumberValue] = useState(10);
+  useEffect(() => {
+    const savedPrompt = Cookies.get('system_prompt');
+    if (savedPrompt) {
+      setSystemPrompt(savedPrompt);
+    }
+  }, [setSystemPrompt]);
+
+  //TODO: change that for a save button
+  const handlePromptChange = (value: string) => {
+    setSystemPrompt(value);
+    Cookies.set('system_prompt', value, { expires: 7, sameSite: 'strict' });
+  };
 
   return (
     <div className="fixed right-0 bottom-0 m-3 text-left">
@@ -66,20 +86,19 @@ export function Settings({sliderValue,setSliderValue}:SettingsProps) {
               />
             </div>
 
-            {/* Kontrolka 2: Input Number */}
-            {/* <div className="space-y-1.5">
+            {/* Kontrolka 2: Textarea (System Prompt) */}
+            <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">
-                Czas odświeżania (s)
+                System Prompt 
               </label>
-              <input
-                type="number"
-                min="1"
-                max="60"
-                value={numberValue}
-                onChange={(e) => setNumberValue(Number(e.target.value))}
-                className="w-full px-3 py-1.5 text-sm bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              <textarea
+                value={systemPrompt}
+                onChange={(e) => handlePromptChange(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 text-sm bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[80px]"
+                placeholder="Type your system prompt here..."
               />
-            </div> */}
+            </div>
           </div>
         </div>
       )}
