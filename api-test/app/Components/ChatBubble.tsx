@@ -63,23 +63,21 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
       >
         {typeof text === "string" ? (
           <ReactMarkdown
+            disallowedElements={['p']}
+            unwrapDisallowed={true}
             components={{
-              // Nadpisujemy domyślne renderowanie tagu <code>
               code({ node, inline, className, children, ...props }: any) {
                 const match = /language-(\w+)/.exec(className || "");
                 const codeString = String(children).replace(/\n$/, "");
 
-                // Jeśli to blok kodu (nie inline) i ma określony język (lub po prostu znaczniki ```)
                 if (!inline && match) {
                   return <CodeBlock language={match[1]} code={codeString} />;
                 }
                 
-                // Jeśli ktoś wpisał kod bez języka, np. same ```
                 if (!inline && !match) {
                     return <CodeBlock language="text" code={codeString} />;
                 }
 
-                // Renderowanie zwykłego kodu inline: `np. tak`
                 return (
                   <code
                     className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5"

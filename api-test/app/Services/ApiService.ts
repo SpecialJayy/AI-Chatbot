@@ -1,11 +1,9 @@
-import { options } from "../Config/Config";
-import ollama  from "ollama";
+import OpenAI from "openai"
 interface loadingArgs {
     setIsLoading: (value:boolean)=>void
 }
 
 export class ApiService {
-    private baseUrl = "http://localhost:11434/api";
     private setIsLoading: (value: boolean) => void;
 
     constructor({ setIsLoading }: loadingArgs) {
@@ -16,11 +14,11 @@ export class ApiService {
         msg: string, 
         model: string, 
         onChunk: (text: string) => void,
-        options?: any,     
+        temperature:number,     
         system?: string | undefined,
     ): Promise<string> {
         this.setIsLoading(true);
-        
+    
         const messages: any[] = [];
         if (system) {
             messages.push({ role: 'system', content: system });
@@ -28,7 +26,8 @@ export class ApiService {
         messages.push({ role: 'user', content: msg });
 
         try {
-            const response = await fetch(`${this.baseUrl}/chat`, {
+            
+            const response = await fetch(`./api/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -37,7 +36,8 @@ export class ApiService {
                     model: model,
                     messages: messages,
                     stream: true,
-                    options: options
+                    temperature: temperature,
+                    thinking: false,
                 })
             });
 
@@ -46,17 +46,21 @@ export class ApiService {
             }
 
             const reader = response.body?.getReader();
-            const decoder = new TextDecoder();
+            const decoder = new TextDecoder();      
             let fullContent = "";
 
             if (reader) {
+                let buffer = "";
+
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split("\n");
-
+                
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                
+                    buffer = lines.pop() || ""; 
+                
                     for (const line of lines) {
                         if (line.trim() === "") continue;
                         try {
@@ -64,31 +68,42 @@ export class ApiService {
                             if (parsed.message?.content) {
                                 const newText = parsed.message.content;
                                 fullContent += newText;
-
-                                onChunk(newText)
+                                onChunk(newText);
                             }
                         } catch (e) {
-                            console.error("Error parsing stream chunk", e);
+                            console.error("Error parsing stream chunk", e, line);
                         }
                     }
                 }
-            }
+            
+                if (buffer.trim() !== "") {
+                    try {
+                        const parsed = JSON.parse(buffer);
+                        if (parsed.message?.content) {
+                            fullContent += parsed.message.content;
+                            onChunk(parsed.message.content);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing final chunk", e);
+                    }
+                }
+            }           
 
-            return fullContent;
+                        return fullContent;
 
-        } catch (error) {
-            console.error("Failed to stream message:", error);
-            throw error; 
-        } finally {
-            this.setIsLoading(false);
-        }
-    }
+                    } catch (error) {
+                        console.error("Failed to stream message:", error);
+                        throw error; 
+                    } finally {
+                        this.setIsLoading(false);
+                    }
+                }
 
     async getModels(): Promise<string[]> {
         const headers = new Headers();
         headers.set("Content-Type", "application/json");
 
-        const request = new Request(this.baseUrl + "/tags", {
+        const request = new Request("http://localhost:11434/api" + "/tags", {
             method: "GET",
             headers: headers,
         });
@@ -109,7 +124,7 @@ export class ApiService {
         const headers = new Headers();
         headers.set("Content-Type", "application/json");
 
-        const request = new Request(this.baseUrl + "/ps", {
+        const request = new Request("http://localhost:11434/api" + "/ps", {
             method: "GET",
             headers: headers,
         });
