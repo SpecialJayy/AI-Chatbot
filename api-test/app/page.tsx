@@ -74,6 +74,7 @@ export default function Home() {
 
   return (
     <div className="overflow-auto flex flex-col-reverse">
+    <img src={"favicon.ico"} className="fixed top-0 left-0 w-10 m-3 select-none pointer-events-none" draggable={false}/>
     <div className="flex flex-col flex-1 items-center justify-end min-h-screen bg-gradient-to-br from-slate-500 to-slate-100 font-sans dark:from-zinc-950 dark:to-zinc-900 gap-8 p-6">
 
       <ActiveModels apiService={apiService}/>
