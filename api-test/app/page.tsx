@@ -6,7 +6,6 @@ import { ModelSelection } from "./Components/ModelSelection";
 import { ActiveModels } from "./Components/ActiveModels";
 import { ChatBubble } from "./Components/ChatBubble";
 import { Settings } from "./Components/Settings";
-import { options } from "./Config/Config";
 
 export default function Home() {
   const [msg, setMsg] = React.useState("");
@@ -61,11 +60,8 @@ export default function Home() {
 
     const start = Date.now();
 
-    const options: options = {
-      "temperature":temperature,
-    }
 
-    let res = await apiService.sendMessage(messageToSend, currentModel,onChunk,options,system); 
+    let res = await apiService.sendMessage(messageToSend, currentModel,onChunk,temperature,system); 
     const end = Date.now();
     const ans = `${res}\n\nwykonano w: ${(end - start) / 1000}s`;
   };
@@ -112,7 +108,7 @@ export default function Home() {
         <Settings sliderValue={temperature} setSliderValue={setTemperature} systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt}/>
       </div>
 
-      <div className="fixed bottom-0 m-2 flex flex-cols sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-3xl p-3 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/20 dark:border-zinc-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none">
+      <div className="fixed bottom-0 m-2 flex flex-cols sm:items-end sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-3xl p-3 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/20 dark:border-zinc-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none">
         <ModelSelection model={model} setModel={setModel} apiService={apiService}/>
         <ChatInput msg={msg} setMsg={setMsg} onSubmit={handleTriggerSubmit} />
         <button
