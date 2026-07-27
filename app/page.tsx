@@ -11,6 +11,7 @@ import { ImageInput } from "./Components/ImageInput";
 interface ChatMessage {
   text: string;
   timestamp?: string; 
+  imageUrls?: string[];
 }
 
 export default function Home() {
@@ -32,22 +33,6 @@ export default function Home() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, isLoading]); 
 
-  const setAnswer = (textOrFn: string | ((prev: string) => string)) => {
-    setChat((prevChat) => {
-      if (prevChat.length === 0) return prevChat;
-      
-      const updatedChat = [...prevChat];
-      const lastIndex = updatedChat.length - 1;
-      const currentText = updatedChat[lastIndex].text;
-
-      const newText = typeof textOrFn === "function" ? textOrFn(currentText) : textOrFn;
-      
-      updatedChat[lastIndex] = { ...updatedChat[lastIndex], text: newText };
-      return updatedChat;
-    });
-  };
-
-  // Dostosowane do aktualizowania właściwości 'text' w obiekcie
   const onChunk = (chunk: string) => {
     setChat((prevChat) => {
       if (prevChat.length === 0) return prevChat;
@@ -64,13 +49,15 @@ export default function Home() {
     });
   };
 
-  const sendMessage = async (messageToSend: string, currentModel: string, system?: string) => {
-    setChat((prev) => [...prev, { text: messageToSend }]);
+  const sendMessage = async (messageToSend: string, currentModel: string, system?: string, images?: File[]) => {
+    const imageUrls = images ? images.map((file) => URL.createObjectURL(file)) : [];
+
+    setChat((prev) => [...prev, { text: messageToSend, imageUrls }]);
     setChat((prev) => [...prev, { text: "" }]);
 
     const start = Date.now();
 
-    await apiService.sendMessage(messageToSend, currentModel, onChunk, temperature, system); 
+    await apiService.sendMessage(messageToSend, currentModel, onChunk, temperature, system, images); 
 
     const end = Date.now();
     const durationS = ((end - start) / 1000).toFixed(2) + "s";
@@ -88,7 +75,7 @@ export default function Home() {
 
   const handleTriggerSubmit = () => {
     if (!msg.trim() || isLoading) return;
-    sendMessage(msg, model, systemPrompt);
+    sendMessage(msg, model, systemPrompt, selectedImages);
     setMsg("");
     setSelectedImages([]);
   };
@@ -136,24 +123,38 @@ export default function Home() {
               const isWaitingForFirstChunk = isAgent && isLastElement && isLoading && msgObj.text === "";
 
               return (
-                <ChatBubble 
-                  key={i}
-                  sender={isAgent ? "agent" : "client"} 
-                  timestamp={msgObj.timestamp} 
-                  text={
-                    isWaitingForFirstChunk ? (
-                      <div className="flex items-center gap-2 text-slate-400 dark:text-zinc-400 py-1">
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                        </span>
-                        <span>Thinking...</span>
-                      </div>
-                    ) : (
-                      msgObj.text
-                    )
-                  }
-                />
+                <div key={i} className={`flex flex-col ${isAgent ? "items-start" : "items-end"} my-1`}>
+                  {!isAgent && msgObj.imageUrls && msgObj.imageUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                      {msgObj.imageUrls.map((url, imgIdx) => (
+                        <img 
+                          key={imgIdx} 
+                          src={url} 
+                          alt={`Uploaded content ${imgIdx}`} 
+                          className="max-w-[200px] max-h-[200px] object-cover rounded-2xl border border-slate-300 dark:border-zinc-700 shadow-sm"
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  <ChatBubble 
+                    sender={isAgent ? "agent" : "client"} 
+                    timestamp={msgObj.timestamp} 
+                    text={
+                      isWaitingForFirstChunk ? (
+                        <div className="flex items-center gap-2 text-slate-400 dark:text-zinc-400 py-1">
+                          <span className="flex h-2 w-2 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                          </span>
+                          <span>Thinking...</span>
+                        </div>
+                      ) : (
+                        msgObj.text
+                      )
+                    }
+                  />
+                </div>
               );
             })
           }

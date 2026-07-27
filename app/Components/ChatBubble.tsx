@@ -50,15 +50,15 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
   const isClient = sender === "client";
 
   return (
-    <div className={`flex w-full ${isClient ? "justify-end" : "justify-start"} mb-2`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm flex flex-col gap-0.5
-          ${
-            isClient
-              ? "bg-blue-600 text-white rounded-tr-none"
-              : "bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 rounded-tl-none"
-          }`}
-      >
+        <div className={`flex w-full ${isClient ? "justify-end" : "justify-start"} mb-2`}>
+          <div
+            className={`px-4 py-2.5 text-sm flex flex-col gap-0.5
+              ${
+                isClient
+                  ? "max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-tr-none shadow-sm"
+                  : "w-full bg-transparent text-slate-800 dark:text-zinc-100 px-0"
+              }`}
+          >
         {typeof text === "string" ? (
           <ReactMarkdown
             disallowedElements={['p']}
