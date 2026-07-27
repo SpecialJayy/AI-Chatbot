@@ -52,8 +52,6 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
   return (
     <div className={`flex w-full ${isClient ? "justify-end" : "justify-start"} mb-2`}>
       <div
-        // Zwiększyłem lekko max-w (np. z 70% na 85%), aby bloki kodu lepiej wyglądały, 
-        // ale możesz przywrócić max-w-[70%] jeśli wolisz.
         className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm flex flex-col gap-0.5
           ${
             isClient

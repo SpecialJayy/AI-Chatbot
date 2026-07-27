@@ -8,7 +8,9 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { model, messages, stream, temperature } = await request.json();
+    const { model, messages, temperature } = await request.json();
+
+    const startTime = Date.now();
 
     const responseStream = await openai.chat.completions.create({
       model: model,
@@ -33,6 +35,18 @@ export async function POST(request: Request) {
               controller.enqueue(encoder.encode(payload));
             }
           }
+
+          const endTime = Date.now();
+          const durationInSeconds = (endTime - startTime) / 1000;
+
+          const finalPayload = JSON.stringify({
+            message: { content: "" },
+            done: true,
+            timeToGenerateS: durationInSeconds
+          }) + "\n";
+          
+          controller.enqueue(encoder.encode(finalPayload));
+
         } catch (err) {
           controller.error(err);
         } finally {

@@ -2,6 +2,24 @@ import OpenAI from "openai"
 interface loadingArgs {
     setIsLoading: (value:boolean)=>void
 }
+export interface TextContentPart {
+  type: "text";
+  text: string;
+}
+
+export interface ImageContentPart {
+  type: "image_url";
+  image_url: {
+    url: string; 
+  };
+}
+
+export interface ChatMessage {
+  role: "user" | "agent" | "system";
+  content: MessageContent;
+}
+
+export type MessageContent = string | Array<TextContentPart | ImageContentPart>;
 
 export class ApiService {
     private setIsLoading: (value: boolean) => void;
@@ -16,14 +34,40 @@ export class ApiService {
         onChunk: (text: string) => void,
         temperature:number,     
         system?: string | undefined,
+        images?: File[] | undefined,
     ): Promise<string> {
         this.setIsLoading(true);
+
+                const b64Images : string[] = [];
+        if (images) {
+            for (const image of images) {
+                b64Images.push(await this.convertFileToBase64(image));
+            }
+        }
     
+        //building the messages array to send to the API
         const messages: any[] = [];
         if (system) {
             messages.push({ role: 'system', content: system });
         }
-        messages.push({ role: 'user', content: msg });
+
+        let newMsg: MessageContent = msg;
+            
+        if (images && images.length > 0) {
+
+          newMsg = [
+            { type: "text", text: msg },
+            ...b64Images.map((img): ImageContentPart => ({
+              type: "image_url",
+              image_url: {
+                url: img
+              }
+            }))
+          ];
+        }
+
+        messages.push({ role: "user", content: newMsg });
+
 
         try {
             
@@ -38,6 +82,7 @@ export class ApiService {
                     stream: true,
                     temperature: temperature,
                     thinking: false,
+                    images: b64Images,
                 })
             });
 
@@ -140,4 +185,20 @@ export class ApiService {
                 return [];
             });
     }
+
+    private convertFileToBase64 = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+
+        reader.onerror = (error) => {
+          reject(error);
+        };
+
+        reader.readAsDataURL(file);
+      });
+    };
 }
