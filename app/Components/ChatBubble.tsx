@@ -24,7 +24,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         <span className="uppercase select-none">{language || "text"}</span>
         <button
           onClick={handleCopy}
-          className="hover:text-white transition-colors select-none"
+          className="hover:text-white transition-colors select-none cursor-pointer"
         >
           {copied ? "Skopiowano!" : "Kopiuj kod"}
         </button>
@@ -50,35 +50,40 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
   const isClient = sender === "client";
 
   return (
-        <div className={`flex w-full ${isClient ? "justify-end" : "justify-start"} mb-2`}>
-          <div
-            className={`px-4 py-2.5 text-sm flex flex-col gap-0.5
-              ${
-                isClient
-                  ? "max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-tr-none shadow-sm"
-                  : "w-full bg-transparent text-slate-800 dark:text-zinc-100 px-0"
-              }`}
-          >
+    <div className={`flex w-full ${isClient ? "justify-end" : "justify-start"} mb-2`}>
+      <div
+        className={`px-4 py-2.5 text-sm flex flex-col gap-0.5 ${
+          isClient
+            ? "max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-tr-none shadow-sm"
+            : "w-full bg-transparent text-slate-800 dark:text-zinc-100 px-0"
+        }`}
+      >
         {typeof text === "string" ? (
+          <div className="prose dark:prose-invert max-w-none text-sm [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>h3]:text-base [&>h3]:font-bold">
           <ReactMarkdown
-            disallowedElements={['p']}
-            unwrapDisallowed={true}
             components={{
-              code({ node, inline, className, children, ...props }: any) {
+              p({ children }) {
+                return <span className="block mb-2">{children}</span>;
+              },
+              code({ className, children, ...props }: any) {
                 const match = /language-(\w+)/.exec(className || "");
                 const codeString = String(children).replace(/\n$/, "");
-
-                if (!inline && match) {
-                  return <CodeBlock language={match[1]} code={codeString} />;
+              
+                const hasNewlines = codeString.includes("\n");
+                const isBlock = match || hasNewlines;
+              
+                if (isBlock) {
+                  return (
+                    <CodeBlock
+                      language={match ? match[1] : "text"}
+                      code={codeString}
+                    />
+                  );
                 }
-                
-                if (!inline && !match) {
-                    return <CodeBlock language="text" code={codeString} />;
-                }
-
+              
                 return (
                   <code
-                    className="bg-black/10 dark:bg-white/10 rounded px-1 py-0.5"
+                    className="bg-black/10 dark:bg-white/10 rounded px-1.5 py-0.5 text-xs font-mono inline"
                     {...props}
                   >
                     {children}
@@ -89,6 +94,7 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
           >
             {text}
           </ReactMarkdown>
+          </div>
         ) : (
           <div className="break-words whitespace-pre-line">{text}</div>
         )}
