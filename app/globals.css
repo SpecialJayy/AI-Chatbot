@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #var(--purity-a0);
   --foreground: #171717;
 }
 
@@ -12,9 +12,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+--night-a0: oklab(17.6% 0 -0.074);
+--night-a10: oklab(10.5% -0.009 -0.05); 
+--purity-a0: oklab(100% 0 0);
+--purity-a10: oklab(97% 0 0);
+--purity-a20: oklab(94.9% 0 0);
+--purity-a30: oklab(90.7% 0 0);
+--purity-a40: oklab(87.3% 0 0);
+--purity-a50: oklab(84.5% 0 0);
+--purity-a60: oklab(80.5% 0 0);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: var(--night-a10);
     --foreground: #ededed;
   }
 }
@@ -23,4 +35,35 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  scrollbar-width: thin; 
+}
+
+/* Custom Thin Scrollbar with No Background */
+
+/* 1. Set the overall width of the scrollbar */
+::-webkit-scrollbar {
+  width: 5px;  /* Vertical scrollbar width */
+  height: 5px; /* Horizontal scrollbar height */
+}
+
+/* 2. Remove track background completely */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 3. Style the scrollbar handle (thumb) */
+::-webkit-scrollbar-thumb {
+  background: rgba(155, 155, 155, 0.4);
+  border-radius: 10px;
+}
+
+/* 4. Optional: Highlight thumb on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(155, 155, 155, 0.7);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 155, 155, 0.4) transparent;
 }
