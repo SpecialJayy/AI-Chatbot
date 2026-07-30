@@ -10,6 +10,7 @@ export function ImageInput({ onFileSelect, disabled }: ImageInputProps) {
     if (!e.target) return;
     const file = e.target.files ? e.target.files[0] : null;
     if (file && onFileSelect) {
+
       onFileSelect(file);
     }
   };

@@ -22,7 +22,7 @@ export const ContextMonitor: React.FC<ContextMonitorProps> = memo(({ context }) 
         cy={center}
         r={radius}
         fill="transparent"
-        stroke="#e5e7eb00"
+        stroke="#18181b"
         strokeWidth={strokeWidth}
       />
       <circle

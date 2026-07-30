@@ -1,5 +1,5 @@
 import { ChatMessage, ImageContentPart, loadingArgs, OllamaModel } from "../Config/Interfaces";
-import { MessageContent } from "../Config/Types";
+import { CAPABILITY_KEYS, MessageContent, ModelCapabilities } from "../Config/Types";
 
 export class ApiService {
     private setIsLoading: (value: boolean) => void;
@@ -186,6 +186,50 @@ export class ApiService {
                 console.error(`Fetch issue: ${err}`);
                 return [];
             });
+    }
+
+    async getModelCapabilities(modelName: string): Promise<ModelCapabilities | ""> {
+        try {
+            const res = await fetch(`http://localhost:11434/api/show`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: modelName })
+            });
+            if (!res.ok) throw new Error(`Network error: ${res.status}`);
+            const data = await res.json();
+
+            const capabilities = Object.fromEntries(CAPABILITY_KEYS.map(key => [key,false])) as ModelCapabilities
+            
+            for (const capability of data.capabilities || []) {
+                if (capability in capabilities) {
+                    capabilities[capability as keyof ModelCapabilities] = true;
+                }
+            }
+
+            return capabilities || "";
+        } catch (err) {
+            console.error(`Fetch issue: ${err}`);
+            return "";
+        }
+    }
+
+    async getModelDefaultTemperature(modelName: string): Promise<number> {
+        try {
+            const res = await fetch(`http://localhost:11434/api/show`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ model: modelName })
+            });
+            if (!res.ok) throw new Error(`Network error: ${res.status}`);
+            const data = await res.json();
+            const match = data.parameters?.match(/temperature\s+([0-9.]+)/)
+            let temp = match? +match[1] : 1;
+
+            return isNaN(temp) ? 1 : temp
+        } catch (err) {
+            console.error(`Fetch issue: ${err}`);
+            return 1;
+        }
     }
 
     // Promisified FileReader to convert a file to a Base64 encoded string.
