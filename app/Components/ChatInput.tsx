@@ -37,7 +37,7 @@ export function ChatInput({ msg, setMsg, onSubmit }: ChatInputProps){
     return(
     <textarea
         ref={textareaRef}
-        className="flex-1 w-full bg-transparent text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 text-sm py-3 ps-2 resize-none focus:outline-none overflow-y-auto"
+        className="flex-1 w-full align-middle bg-transparent text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 text-sm py-3 ps-2 resize-none focus:outline-none overflow-y-auto"
         placeholder="Type here..."
         value={msg}
         onKeyDown={handleKeyDown}

@@ -59,7 +59,7 @@ export function ChatBubble({ text, sender, timestamp}: ChatBubbleProps) {
         }`}
       >
         {typeof text === "string" ? (
-          <div className="prose dark:prose-invert max-w-none text-sm [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>h3]:text-base [&>h3]:font-bold">
+          <div className="prose break-all dark:prose-invert max-w-none text-sm [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&>h1]:text-xl [&>h1]:font-bold [&>h2]:text-lg [&>h2]:font-bold [&>h3]:text-base [&>h3]:font-bold">
           <ReactMarkdown
             components={{
               p({ children }) {
@@ -92,7 +92,7 @@ export function ChatBubble({ text, sender, timestamp}: ChatBubbleProps) {
               },
             }}
           >
-            {text}
+          {text}
           </ReactMarkdown>
           </div>
         ) : (
