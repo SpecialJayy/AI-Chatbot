@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ApiService } from "../../Services/ApiService";
 import { ActiveModel } from "./ActiveModel";
-import { STATUS } from "@/app/Enums/Status";
+import { STATUS } from "@/app/Config/Enums";
 
 interface ActiveModelsProps {
     apiService: ApiService;

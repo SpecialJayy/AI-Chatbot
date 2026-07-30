@@ -1,4 +1,4 @@
-import { STATUS } from "../../Enums/Status";
+import { STATUS } from "../../Config/Enums";
 
 interface ActiveModelProps {
     name:string,
