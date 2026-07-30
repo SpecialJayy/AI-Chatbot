@@ -38,6 +38,10 @@ body {
   scrollbar-width: thin; 
 }
 
+*{
+  scrollbar-width: thin; 
+}
+
 /* Custom Thin Scrollbar with No Background */
 
 /* 1. Set the overall width of the scrollbar */

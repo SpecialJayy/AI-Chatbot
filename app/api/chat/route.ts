@@ -10,21 +10,32 @@ export async function POST(request: Request) {
   try {
     const { model, messages, temperature } = await request.json();
 
-    const startTime = Date.now();
-
     const responseStream = await openai.chat.completions.create({
       model: model,
       messages: messages,
       stream: true, 
       temperature: temperature,
+      stream_options: {
+        include_usage: true,
+      },
     });
 
     const encoder = new TextEncoder();
 
     const customStream = new ReadableStream({
       async start(controller) {
+
+        let propmtTokens = 0;
+        let completionTokens = 0;
+
         try {
           for await (const chunk of responseStream) {
+
+            if (chunk.usage) {
+              propmtTokens = chunk.usage.prompt_tokens;
+              completionTokens = chunk.usage.completion_tokens;
+            }
+
             const content = chunk.choices[0]?.delta?.content || "";
             
             if (content) {
@@ -36,13 +47,14 @@ export async function POST(request: Request) {
             }
           }
 
-          const endTime = Date.now();
-          const durationInSeconds = (endTime - startTime) / 1000;
-
           const finalPayload = JSON.stringify({
             message: { content: "" },
             done: true,
-            timeToGenerateS: durationInSeconds
+            usage: {
+              prompt_tokens: propmtTokens,
+              completion_tokens: completionTokens,
+              total_tokens: propmtTokens + completionTokens
+            }
           }) + "\n";
           
           controller.enqueue(encoder.encode(finalPayload));

@@ -46,7 +46,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 }
 
-export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ text, sender, timestamp}: ChatBubbleProps) {
   const isClient = sender === "client";
 
   return (
@@ -54,7 +54,7 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
       <div
         className={`px-4 py-2.5 text-sm flex flex-col gap-0.5 ${
           isClient
-            ? "max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-tr-none shadow-sm"
+            ? "max-w-[85%] bg-blue-600 text-white rounded-2xl rounded-tr-none shadow-sm "
             : "w-full bg-transparent text-slate-800 dark:text-zinc-100 px-0"
         }`}
       >
@@ -63,7 +63,7 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
           <ReactMarkdown
             components={{
               p({ children }) {
-                return <span className="block mb-2">{children}</span>;
+                return <span className="block">{children}</span>;
               },
               code({ className, children, ...props }: any) {
                 const match = /language-(\w+)/.exec(className || "");
@@ -99,15 +99,13 @@ export function ChatBubble({ text, sender, timestamp }: ChatBubbleProps) {
           <div className="break-words whitespace-pre-line">{text}</div>
         )}
 
-        {timestamp && (
-          <span
-            className={`text-[10px] self-end mt-0.5 ${
-              isClient ? "text-blue-200" : "text-slate-400"
-            }`}
-          >
+        {
+        (timestamp !== undefined) && (
+          <span className={`text-[10px] self-end mt-0.5 text-slate-400`}>
             {timestamp}
           </span>
-        )}
+        )
+      }
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface ChatInputProps {
   msg: string;
@@ -37,7 +37,7 @@ export function ChatInput({ msg, setMsg, onSubmit }: ChatInputProps){
     return(
     <textarea
         ref={textareaRef}
-        className="flex-1 min-w-0 bg-transparent text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 text-sm py-3 px-2 resize-none focus:outline-none overflow-y-auto max-h-[200px]"
+        className="flex-1 w-full bg-transparent text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 text-sm py-3 ps-2 resize-none focus:outline-none overflow-y-auto"
         placeholder="Type here..."
         value={msg}
         onKeyDown={handleKeyDown}
