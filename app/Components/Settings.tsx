@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Cookies from 'js-cookie'; 
 
 interface SettingsProps {
   sliderValue: number;
@@ -9,27 +8,41 @@ interface SettingsProps {
 
   systemPrompt: string;
   setSystemPrompt: (value: string) => void;
+
+  jsonSchema: string;
+  setJsonSchema: (value: string) => void;
 }
 
 export function Settings({
   sliderValue,
   setSliderValue,
   systemPrompt,
-  setSystemPrompt
+  setSystemPrompt,
+  jsonSchema,
+  setJsonSchema,
 }: SettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Pobieranie zapisanych wartości z localStorage przy uruchomieniu komponentu
   useEffect(() => {
-    const savedPrompt = Cookies.get('system_prompt');
+    const savedPrompt = localStorage.getItem('system_prompt');
     if (savedPrompt) {
       setSystemPrompt(savedPrompt);
     }
-  }, [setSystemPrompt]);
 
-  //TODO: change that for a save button
-  const handlePromptChange = (value: string) => {
-    setSystemPrompt(value);
-    Cookies.set('system_prompt', value, { expires: 7, sameSite: 'strict' });
+    const savedSchema = localStorage.getItem('json_schema');
+    if (savedSchema) {
+      setJsonSchema(savedSchema);
+    }
+  }, [setSystemPrompt, setJsonSchema]);
+
+  // Uniwersalna funkcja zapisu – teraz przyjmuje klucz (key) jako argument
+  const handleSettingChange = <T,>(key: string, value: T, setMethod: (value: T) => void) => {
+    setMethod(value);
+
+    // Zapisujemy jako zwykły tekst lub obiekt przerobiony na tekst JSON
+    const storageValue = typeof value === 'string' ? value : JSON.stringify(value);
+    localStorage.setItem(key, storageValue);
   };
 
   return (
@@ -89,16 +102,31 @@ export function Settings({
             {/* Kontrolka 2: Textarea (System Prompt) */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">
-                System Prompt 
+                System Prompt
               </label>
               <textarea
                 value={systemPrompt}
-                onChange={(e) => handlePromptChange(e.target.value)}
+                onChange={(e) => handleSettingChange('system_prompt', e.target.value, setSystemPrompt)}
                 rows={4}
                 className="w-full px-3 py-2 text-sm bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[80px]"
                 placeholder="Type your system prompt here..."
               />
             </div>
+
+            {/* Kontrolka 3: Textarea (Json Schema) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">
+                Json Schema
+              </label>
+              <textarea
+                value={jsonSchema}
+                onChange={(e) => handleSettingChange('json_schema', JSON.parse(e.target.value), setJsonSchema)}
+                rows={4}
+                className="w-full px-3 py-2 text-sm bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[80px]"
+                placeholder="Input Json schema"
+              />
+            </div>
+
           </div>
         </div>
       )}

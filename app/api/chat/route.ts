@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const responseStream = await openai.chat.completions.create({
       model: model,
       messages: messages,
-      stream: true, 
+      stream: true,
       temperature: temperature,
       stream_options: {
         include_usage: true,
@@ -37,11 +37,11 @@ export async function POST(request: Request) {
             }
 
             const content = chunk.choices[0]?.delta?.content || "";
-            
+
             if (content) {
               const payload = JSON.stringify({
                 message: { content: content }
-              }) + "\n"; 
+              }) + "\n";
 
               controller.enqueue(encoder.encode(payload));
             }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
               total_tokens: propmtTokens + completionTokens
             }
           }) + "\n";
-          
+
           controller.enqueue(encoder.encode(finalPayload));
 
         } catch (err) {

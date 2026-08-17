@@ -16,7 +16,7 @@ export class ApiService {
         temperature: number,     
         system?: string,
         images?: File[],
-        context?: ChatMessage[]
+        context?: ChatMessage[],
     ): Promise<{ content: string; usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number } }> {
         this.setIsLoading(true);
 
@@ -76,6 +76,7 @@ export class ApiService {
                 temperature,
                 thinking: false,
                 images: b64Images,
+
             })
         });
 

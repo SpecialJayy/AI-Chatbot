@@ -16,7 +16,8 @@ export const ContextMonitor: React.FC<ContextMonitorProps> = memo(({ context }) 
   
   const strokeDashoffset = circumference - clampedUsage * circumference;
   return (
-    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+    <div>
+          <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
       <circle
         cx={center}
         cy={center}
@@ -38,5 +39,8 @@ export const ContextMonitor: React.FC<ContextMonitorProps> = memo(({ context }) 
         style={{ transition: 'stroke-dashoffset 0.3s ease' }}
       />
     </svg>
+    {/* <p>{context}</p> */}
+    </div>
+
   )
 });
