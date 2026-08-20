@@ -31,7 +31,6 @@ export default function Home() {
   const [modelCapabilities, setModelCapabilities] = useState<ModelCapabilities | "">("");
   const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [jsonSchema, setJsonSchema] = useState("");
 
   const apiService = useMemo(() => new ApiService({ setIsLoading }), []);
   const { selectedImages, setSelectedImages, handleDragOver, handleDrop, removeImage, clearImages } = useImageUpload();
@@ -78,7 +77,6 @@ export default function Home() {
     setContextLimit(calculatedLimit);
 
     try {
-      // Pass the PARSED schema, not the string
       const result = await apiService.sendMessage(
         msg, model, handleChunk, temperature, systemPrompt, selectedImages, newContextMessages
       );
@@ -111,7 +109,6 @@ export default function Home() {
         <Settings
           sliderValue={temperature} setSliderValue={setTemperature}
           systemPrompt={systemPrompt} setSystemPrompt={setSystemPrompt}
-          jsonSchema={jsonSchema} setJsonSchema={setJsonSchema}
         />
 
         {/* Bottom Input Area */}
@@ -125,7 +122,7 @@ export default function Home() {
           </div>
 
           {/* Main Input Wrapper */}
-          <div className="flex flex-col gap-3 w-[768px] shrink-0 justify-self-center p-3 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/20 dark:border-zinc-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none">
+          <div className="flex flex-col gap-3 w-3xl shrink-0 justify-self-center p-3 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-md border border-white/20 dark:border-zinc-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none">
 
             {/* Selected Images Preview */}
             {selectedImages.length > 0 && (

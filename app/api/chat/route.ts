@@ -1,20 +1,46 @@
 import OpenAI from "openai";
 import { NextResponse } from 'next/server';
+import { z } from "zod/v4";
 
 const openai = new OpenAI({
-  baseURL: "http://localhost:11434/v1/",
+  baseURL: "http://localhost:13305/v1/",
   apiKey: process.env.OPENAI_API_KEY || "ollama",
 });
+
+//TODO: change that to be dynamic if time allows
+
+//schema for structured output
+
+// export const schema = z.object({
+//   name: z.string().describe("Name of the event"),
+//   type: z.string().describe("Type of the event, example: conference, concert"),
+//   start_date: z.string().describe("Date at which the event starts"),
+//   end_date: z.string().nullable().describe("Date at which the event ends"),
+//   hour: z.string().nullable().describe("Time of the event, format HH:MM"),
+//   place: z.string().describe("Place at which the event will take place"),
+//   city: z.string().describe("City where the event will take place"),
+//   ticket_price: z.number().describe("Price of the cheapest ticket option"),
+//   event_organizer: z.string().describe("organizer responsible for the event"),
+//   description: z.string().describe("Brief description of the event, and activities"),
+//   tags: z.array(z.string()).describe("Tags associated with the event, used for example a search engine")
+// });
 
 export async function POST(request: Request) {
   try {
     const { model, messages, temperature } = await request.json();
-
     const responseStream = await openai.chat.completions.create({
       model: model,
       messages: messages,
       stream: true,
       temperature: temperature,
+      // response_format: {
+      //   type: "json_schema",
+      //   json_schema: {
+      //     name: "schema",
+      //     strict: true,
+      //     schema: schema.toJSONSchema()
+      //   }
+      // },
       stream_options: {
         include_usage: true,
       },

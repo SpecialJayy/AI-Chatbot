@@ -8,9 +8,6 @@ interface SettingsProps {
 
   systemPrompt: string;
   setSystemPrompt: (value: string) => void;
-
-  jsonSchema: string;
-  setJsonSchema: (value: string) => void;
 }
 
 export function Settings({
@@ -18,8 +15,6 @@ export function Settings({
   setSliderValue,
   systemPrompt,
   setSystemPrompt,
-  jsonSchema,
-  setJsonSchema,
 }: SettingsProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -30,21 +25,28 @@ export function Settings({
       setSystemPrompt(savedPrompt);
     }
 
-    const savedSchema = localStorage.getItem('json_schema');
-    if (savedSchema) {
-      setJsonSchema(savedSchema);
-    }
-  }, [setSystemPrompt, setJsonSchema]);
+  }, [setSystemPrompt]);
 
   // Uniwersalna funkcja zapisu – teraz przyjmuje klucz (key) jako argument
   const handleSettingChange = <T,>(key: string, value: T, setMethod: (value: T) => void) => {
     setMethod(value);
+    console.log(`New value ${value}`);
 
-    // Zapisujemy jako zwykły tekst lub obiekt przerobiony na tekst JSON
-    const storageValue = typeof value === 'string' ? value : JSON.stringify(value);
+    let storageValue: string;
+
+    if (typeof value === 'string') {
+      storageValue = value;
+    } else {
+      try {
+        storageValue = JSON.stringify(value);
+      } catch (error) {
+        console.warn(`Warning: Value for key "${key}" is not valid JSON. Saving as empty string.`, error);
+        storageValue = '';
+      }
+    }
+
     localStorage.setItem(key, storageValue);
   };
-
   return (
     <div className="fixed right-0 bottom-0 m-3 text-left">
       <button
@@ -112,21 +114,6 @@ export function Settings({
                 placeholder="Type your system prompt here..."
               />
             </div>
-
-            {/* Kontrolka 3: Textarea (Json Schema) */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block">
-                Json Schema
-              </label>
-              <textarea
-                value={jsonSchema}
-                onChange={(e) => handleSettingChange('json_schema', JSON.parse(e.target.value), setJsonSchema)}
-                rows={4}
-                className="w-full px-3 py-2 text-sm bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-y min-h-[80px]"
-                placeholder="Input Json schema"
-              />
-            </div>
-
           </div>
         </div>
       )}

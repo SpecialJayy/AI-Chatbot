@@ -10,10 +10,10 @@ export class ApiService {
 
     // Main entry point orchestrating the chat request pipeline.
     async sendMessage(
-        msg: string, 
-        model: string, 
+        msg: string,
+        model: string,
         onChunk: (text: string) => void,
-        temperature: number,     
+        temperature: number,
         system?: string,
         images?: File[],
         context?: ChatMessage[],
@@ -24,11 +24,11 @@ export class ApiService {
             const b64Images = await this.processImages(images);
             const messages = this.buildMessagePayload(msg, system, b64Images, context);
             const response = await this.fetchChatResponse(model, messages, b64Images, temperature);
-            
+
             return await this.processStream(response, onChunk);
         } catch (error) {
             console.error("Failed to stream message:", error);
-            throw error; 
+            throw error;
         } finally {
             this.setIsLoading(false);
         }
@@ -43,7 +43,7 @@ export class ApiService {
     // Constructs the ordered message array required by the API.
     private buildMessagePayload(msg: string, system?: string, b64Images?: string[], context?: ChatMessage[]): any[] {
         const messages: any[] = [];
-        
+
         if (system) messages.push({ role: 'system', content: system });
         if (context) messages.push(...context);
 
@@ -76,13 +76,21 @@ export class ApiService {
                 temperature,
                 thinking: false,
                 images: b64Images,
-
             })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            let errorDetails = "";
+            try {
+                const errorData = await response.json();
+                errorDetails = errorData.message || errorData.error || JSON.stringify(errorData);
+            } catch {
+                errorDetails = await response.text().catch(() => "No additional error body");
+            }
+
+            throw new Error(`HTTP error ${response.status} (${response.statusText}): ${errorDetails}`);
         }
+
         return response;
     }
 
@@ -91,7 +99,7 @@ export class ApiService {
         const reader = response.body?.getReader();
         if (!reader) return { content: "", usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } };
 
-        const decoder = new TextDecoder();      
+        const decoder = new TextDecoder();
         let fullContent = "";
         let buffer = "";
         const usage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
@@ -99,11 +107,11 @@ export class ApiService {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-        
+
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
-            buffer = lines.pop() || ""; 
-        
+            buffer = lines.pop() || "";
+
             for (const line of lines) {
                 if (line.trim() === "") continue;
                 const maybeUsage = this.parseStreamLine(line, onChunk, (newText) => fullContent += newText);
@@ -114,7 +122,7 @@ export class ApiService {
                 }
             }
         }
-    
+
         // Handles any remaining data left in the buffer after the stream closes.
         if (buffer.trim() !== "") {
             const maybeUsage = this.parseStreamLine(buffer, onChunk, (newText) => fullContent += newText);
@@ -155,24 +163,37 @@ export class ApiService {
 
     async getModels(): Promise<OllamaModel[]> {
         try {
-          const res = await fetch("http://localhost:11434/api/tags", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (!res.ok) throw new Error(`Network error: ${res.status}`);
-          const data = await res.json();
-          return data.models || [];
+            const res = await fetch("http://localhost:13305/v1/models", {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!res.ok) throw new Error(`Network error: ${res.status}`);
+
+            const body = await res.json();
+            const modelList = body.data || [];
+
+            return modelList.map((item: any) => ({
+                name: item.id || item.name || "unknown",
+                model: item.id || item.model || "unknown",
+                modified_at: item.created
+                    ? new Date(item.created * 1000).toISOString()
+                    : new Date().toISOString(),
+                size: item.size || 0,
+                digest: item.digest || item.id || "",
+                details: item.details || {},
+            }));
         } catch (err) {
-          console.error(`Fetch issue: ${err}`);
-          return [];
+            console.error(`Fetch issue: ${err}`);
+            return [];
         }
-      }
+    }
 
     async getActiveModels(): Promise<string[]> {
         const headers = new Headers();
         headers.set("Content-Type", "application/json");
 
-        const request = new Request("http://localhost:11434/api/ps", {
+        const request = new Request("http://localhost:13305/v1/health", {
             method: "GET",
             headers: headers,
         });
@@ -182,7 +203,21 @@ export class ApiService {
                 if (!res.ok) throw new Error(`Network error: ${res.status}`);
                 return res.json();
             })
-            .then(res => res.models)
+            .then(data => {
+                // 1. Primary: Parse active models from Lemonade's `all_models_loaded` status field
+                if (Array.isArray(data.all_models_loaded)) {
+                    return data.all_models_loaded.map((m: any) => m.model_name || m.checkpoint || m.id || "");
+                }
+
+                // 2. Fallback: Parse single `model_loaded` string if present
+                if (data.model_loaded) {
+                    return [data.model_loaded];
+                }
+
+                // 3. Fallback: Parse generic endpoints (data/models arrays)
+                const list = data.data || data.models || (Array.isArray(data) ? data : []);
+                return list.map((item: any) => typeof item === "string" ? item : (item.id || item.name || item.model || ""));
+            })
             .catch(err => {
                 console.error(`Fetch issue: ${err}`);
                 return [];
@@ -191,23 +226,46 @@ export class ApiService {
 
     async getModelCapabilities(modelName: string): Promise<ModelCapabilities | ""> {
         try {
-            const res = await fetch(`http://localhost:11434/api/show`, {
-                method: "POST",
+            const res = await fetch(`http://localhost:13305/v1/models`, {
+                method: "GET",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ model: modelName })
             });
-            if (!res.ok) throw new Error(`Network error: ${res.status}`);
-            const data = await res.json();
 
-            const capabilities = Object.fromEntries(CAPABILITY_KEYS.map(key => [key,false])) as ModelCapabilities
-            
-            for (const capability of data.capabilities || []) {
-                if (capability in capabilities) {
-                    capabilities[capability as keyof ModelCapabilities] = true;
-                }
+            if (!res.ok) throw new Error(`Network error: ${res.status}`);
+            const body = await res.json();
+
+            const capabilities: ModelCapabilities = Object.fromEntries(
+                CAPABILITY_KEYS.map(key => [key, false])
+            ) as ModelCapabilities;
+
+            const models = body.data || body.models || [];
+            const targetModel = models.find(
+                (m: any) => m.id === modelName || m.name === modelName || m.checkpoint === modelName
+            );
+
+            if (!targetModel) return capabilities;
+
+            // 1. Read capabilities directly from Lemonade's "labels" array
+            const labels: string[] = targetModel.labels || [];
+            if (labels.includes("vision")) capabilities.vision = true;
+            if (labels.includes("tool-calling") || labels.includes("tools")) capabilities.tools = true;
+
+            // 2. Derive jsonSchema & thinking based on engine support or labels/naming
+            if (targetModel.recipe === "llamacpp" || capabilities.tools) {
+                capabilities.jsonSchema = true; // llama.cpp engine natively supports structured JSON output
             }
 
-            return capabilities || "";
+            const lowerName = (targetModel.id || targetModel.checkpoint || modelName).toLowerCase();
+            if (
+                labels.includes("thinking") ||
+                labels.includes("mtp") ||
+                lowerName.includes("r1") ||
+                lowerName.includes("thinking")
+            ) {
+                capabilities.thinking = true;
+            }
+
+            return capabilities;
         } catch (err) {
             console.error(`Fetch issue: ${err}`);
             return "";
@@ -224,7 +282,7 @@ export class ApiService {
             if (!res.ok) throw new Error(`Network error: ${res.status}`);
             const data = await res.json();
             const match = data.parameters?.match(/temperature\s+([0-9.]+)/)
-            let temp = match? +match[1] : 1;
+            let temp = match ? +match[1] : 1;
 
             return isNaN(temp) ? 1 : temp
         } catch (err) {
@@ -235,18 +293,18 @@ export class ApiService {
 
     // Promisified FileReader to convert a file to a Base64 encoded string.
     public convertFileToBase64 = (file: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
 
-        reader.onload = () => {
-          resolve(reader.result as string);
-        };
+            reader.onload = () => {
+                resolve(reader.result as string);
+            };
 
-        reader.onerror = (error) => {
-          reject(error);
-        };
+            reader.onerror = (error) => {
+                reject(error);
+            };
 
-        reader.readAsDataURL(file);
-      });
+            reader.readAsDataURL(file);
+        });
     };
 }
