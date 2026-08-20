@@ -161,136 +161,137 @@ export class ApiService {
         return undefined;
     }
 
-    async getModels(): Promise<OllamaModel[]> {
-        try {
-            const res = await fetch("http://localhost:13305/v1/models", {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            });
+private async fetchModels(): Promise<any[]> {
+    const res = await fetch("http://localhost:13305/v1/models", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+    });
 
+    if (!res.ok) throw new Error(`Network error: ${res.status}`);
+
+    const body = await res.json();
+    return body.data || body.models || [];
+}
+
+async getModels(): Promise<OllamaModel[]> {
+    try {
+        const models = await this.fetchModels();
+
+        return models.map((item: any) => ({
+            name: item.id || item.name || "unknown",
+            model: item.id || item.model || "unknown",
+            modified_at: item.created
+                ? new Date(item.created * 1000).toISOString()
+                : new Date().toISOString(),
+            size: item.size || 0,
+            digest: item.digest || item.id || "",
+            details: item.details || {},
+        }));
+    } catch (err) {
+        console.error(`Fetch issue: ${err}`);
+        return [];
+    }
+}
+
+async getActiveModels(): Promise<string[]> {
+    const headers = new Headers();
+    headers.set("Content-Type", "application/json");
+
+    const request = new Request("http://localhost:13305/v1/health", {
+        method: "GET",
+        headers: headers,
+    });
+
+    return fetch(request)
+        .then(res => {
             if (!res.ok) throw new Error(`Network error: ${res.status}`);
+            return res.json();
+        })
+        .then(data => {
+            // 1. Primary: Parse active models from Lemonade's `all_models_loaded` status field
+            if (Array.isArray(data.all_models_loaded)) {
+                return data.all_models_loaded.map((m: any) => m.model_name || m.checkpoint || m.id || "");
+            }
 
-            const body = await res.json();
-            const modelList = body.data || [];
+            // 2. Fallback: Parse single `model_loaded` string if present
+            if (data.model_loaded) {
+                return [data.model_loaded];
+            }
 
-            return modelList.map((item: any) => ({
-                name: item.id || item.name || "unknown",
-                model: item.id || item.model || "unknown",
-                modified_at: item.created
-                    ? new Date(item.created * 1000).toISOString()
-                    : new Date().toISOString(),
-                size: item.size || 0,
-                digest: item.digest || item.id || "",
-                details: item.details || {},
-            }));
-        } catch (err) {
+            // 3. Fallback: Parse generic endpoints (data/models arrays)
+            const list = data.data || data.models || (Array.isArray(data) ? data : []);
+            return list.map((item: any) => typeof item === "string" ? item : (item.id || item.name || item.model || ""));
+        })
+        .catch(err => {
             console.error(`Fetch issue: ${err}`);
             return [];
-        }
-    }
-
-    async getActiveModels(): Promise<string[]> {
-        const headers = new Headers();
-        headers.set("Content-Type", "application/json");
-
-        const request = new Request("http://localhost:13305/v1/health", {
-            method: "GET",
-            headers: headers,
         });
+}
 
-        return fetch(request)
-            .then(res => {
-                if (!res.ok) throw new Error(`Network error: ${res.status}`);
-                return res.json();
-            })
-            .then(data => {
-                // 1. Primary: Parse active models from Lemonade's `all_models_loaded` status field
-                if (Array.isArray(data.all_models_loaded)) {
-                    return data.all_models_loaded.map((m: any) => m.model_name || m.checkpoint || m.id || "");
-                }
+async getModelCapabilities(modelName: string): Promise<ModelCapabilities | ""> {
+    try {
+        const models = await this.fetchModels();
 
-                // 2. Fallback: Parse single `model_loaded` string if present
-                if (data.model_loaded) {
-                    return [data.model_loaded];
-                }
+        const capabilities: ModelCapabilities = Object.fromEntries(
+            CAPABILITY_KEYS.map(key => [key, false])
+        ) as ModelCapabilities;
 
-                // 3. Fallback: Parse generic endpoints (data/models arrays)
-                const list = data.data || data.models || (Array.isArray(data) ? data : []);
-                return list.map((item: any) => typeof item === "string" ? item : (item.id || item.name || item.model || ""));
-            })
-            .catch(err => {
-                console.error(`Fetch issue: ${err}`);
-                return [];
-            });
-    }
+        const targetModel = models.find(
+            (m: any) => m.id === modelName || m.name === modelName || m.checkpoint === modelName
+        );
 
-    async getModelCapabilities(modelName: string): Promise<ModelCapabilities | ""> {
-        try {
-            const res = await fetch(`http://localhost:13305/v1/models`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            });
+        if (!targetModel) return capabilities;
 
-            if (!res.ok) throw new Error(`Network error: ${res.status}`);
-            const body = await res.json();
+        // 1. Read capabilities directly from Lemonade's "labels" array
+        const labels: string[] = targetModel.labels || [];
+        if (labels.includes("vision")) capabilities.vision = true;
+        if (labels.includes("tool-calling") || labels.includes("tools")) capabilities.tools = true;
 
-            const capabilities: ModelCapabilities = Object.fromEntries(
-                CAPABILITY_KEYS.map(key => [key, false])
-            ) as ModelCapabilities;
-
-            const models = body.data || body.models || [];
-            const targetModel = models.find(
-                (m: any) => m.id === modelName || m.name === modelName || m.checkpoint === modelName
-            );
-
-            if (!targetModel) return capabilities;
-
-            // 1. Read capabilities directly from Lemonade's "labels" array
-            const labels: string[] = targetModel.labels || [];
-            if (labels.includes("vision")) capabilities.vision = true;
-            if (labels.includes("tool-calling") || labels.includes("tools")) capabilities.tools = true;
-
-            // 2. Derive jsonSchema & thinking based on engine support or labels/naming
-            if (targetModel.recipe === "llamacpp" || capabilities.tools) {
-                capabilities.jsonSchema = true; // llama.cpp engine natively supports structured JSON output
-            }
-
-            const lowerName = (targetModel.id || targetModel.checkpoint || modelName).toLowerCase();
-            if (
-                labels.includes("thinking") ||
-                labels.includes("mtp") ||
-                lowerName.includes("r1") ||
-                lowerName.includes("thinking")
-            ) {
-                capabilities.thinking = true;
-            }
-
-            return capabilities;
-        } catch (err) {
-            console.error(`Fetch issue: ${err}`);
-            return "";
+        // 2. Derive jsonSchema & thinking based on engine support or labels/naming
+        if (targetModel.recipe === "llamacpp" || capabilities.tools) {
+            capabilities.jsonSchema = true; // llama.cpp engine natively supports structured JSON output
         }
-    }
 
-    async getModelDefaultTemperature(modelName: string): Promise<number> {
-        try {
-            const res = await fetch(`http://localhost:11434/api/show`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ model: modelName })
-            });
-            if (!res.ok) throw new Error(`Network error: ${res.status}`);
-            const data = await res.json();
-            const match = data.parameters?.match(/temperature\s+([0-9.]+)/)
-            let temp = match ? +match[1] : 1;
-
-            return isNaN(temp) ? 1 : temp
-        } catch (err) {
-            console.error(`Fetch issue: ${err}`);
-            return 1;
+        const lowerName = (targetModel.id || targetModel.checkpoint || modelName).toLowerCase();
+        if (
+            labels.includes("thinking") ||
+            labels.includes("mtp") ||
+            lowerName.includes("r1") ||
+            lowerName.includes("thinking")
+        ) {
+            capabilities.thinking = true;
         }
-    }
 
+        return capabilities;
+    } catch (err) {
+        console.error(`Fetch issue: ${err}`);
+        return "";
+    }
+}
+
+async getModelDefaultTemperature(modelName: string): Promise<number> {
+    try {
+        const models = await this.fetchModels();
+
+        const targetModel = models.find(
+            (m: any) => m.id === modelName || m.name === modelName || m.checkpoint === modelName
+        );
+
+        if (!targetModel) return 1;
+
+        // Check for explicit temperature in recipe_options, parameters, or metadata
+        const temp =
+            targetModel.recipe_options?.temperature ??
+            targetModel.recipe_options?.temp ??
+            targetModel.parameters?.temperature ??
+            0.7; // Standard default for llama.cpp / Lemonade
+
+        return typeof temp === "number" && !isNaN(temp) ? temp : 0.7;
+    } catch (err) {
+        console.error(`Fetch issue: ${err}`);
+        return 1;
+    }
+}
     // Promisified FileReader to convert a file to a Base64 encoded string.
     public convertFileToBase64 = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {

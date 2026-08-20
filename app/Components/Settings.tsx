@@ -48,7 +48,7 @@ export function Settings({
     localStorage.setItem(key, storageValue);
   };
   return (
-    <div className="fixed right-0 bottom-0 m-3 text-left">
+    <div className="fixed right-0 bottom-0 m-3 text-left z-999">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-white dark:bg-gray-800 rounded-full shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500"
